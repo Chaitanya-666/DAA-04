@@ -79,54 +79,51 @@ int countInversionsBruteForce(const std::vector<int>& courses) {
     return inversions;
 }
 
-// Divide and Conquer approach - Merge and Count inversions
-int mergeAndCount(std::vector<int>& arr, std::vector<int>& temp, int left, int mid, int right) {
-    int i = left;  // Starting index for left subarray
-    int j = mid + 1;  // Starting index for right subarray
-    int k = left;  // Starting index to be sorted in temp array
-    int inv_count = 0;
+// Divide and Conquer Inversion Count
+int mergeAndCount(std::vector<int>& arr, int left, int mid, int right) {
+    int i = left;    // Starting index for left subarray
+    int j = mid + 1; // Starting index for right subarray
+    int inversions = 0;
+    std::vector<int> temp;
 
-    // Merge the two halves
-    while ((i <= mid) && (j <= right)) {
+    // Merge and count inversions
+    while (i <= mid && j <= right) {
         if (arr[i] <= arr[j]) {
-            temp[k++] = arr[i++];
+            temp.push_back(arr[i++]);
         } else {
-            temp[k++] = arr[j++];
-            inv_count += (mid - i + 1);  // All elements from i to mid are greater than arr[j]
+            temp.push_back(arr[j++]);
+            inversions += (mid - i + 1); // Count inversions
         }
     }
 
-    // Copy the remaining elements of left subarray, if any
-    while (i <= mid)
-        temp[k++] = arr[i++];
+    // Copy remaining elements of left subarray
+    while (i <= mid) {
+        temp.push_back(arr[i++]);
+    }
 
-    // Copy the remaining elements of right subarray, if any
-    while (j <= right)
-        temp[k++] = arr[j++];
+    // Copy remaining elements of right subarray
+    while (j <= right) {
+        temp.push_back(arr[j++]);
+    }
 
-    // Copy the sorted subarray into the original array
-    for (i = left; i <= right; i++)
-        arr[i] = temp[i];
+    // Copy temp array back to original array
+    for (i = left; i <= right; i++) {
+        arr[i] = temp[i - left];
+    }
 
-    return inv_count;
+    return inversions;
 }
 
-// Divide and Conquer approach - Recursive function to count inversions
-int countInversionsDAC(std::vector<int>& arr, std::vector<int>& temp, int left, int right) {
-    int mid, inv_count = 0;
-    if (left < right) {
-        mid = (left + right) / 2;
-
-        // Count inversions in the left half
-        inv_count += countInversionsDAC(arr, temp, left, mid);
-        
-        // Count inversions in the right half
-        inv_count += countInversionsDAC(arr, temp, mid + 1, right);
-        
-        // Count cross-inversions during the merge
-        inv_count += mergeAndCount(arr, temp, left, mid, right);
+int countInversionsDivideAndConquer(std::vector<int>& arr, int left, int right) {
+    if (left >= right) {
+        return 0; // Base case: single element
     }
-    return inv_count;
+
+    int mid = left + (right - left) / 2;
+    int inversions = countInversionsDivideAndConquer(arr, left, mid);
+    inversions += countInversionsDivideAndConquer(arr, mid + 1, right);
+    inversions += mergeAndCount(arr, left, mid, right);
+    return inversions;
 }
 
 // Main processing function
@@ -145,16 +142,9 @@ void processData(const std::string& input_file, const std::string& filename, int
             continue;
         }
 
-        int inversions = 0;
-        if (approach == 0) {
-            // Brute Force Approach
-            inversions = countInversionsBruteForce(courses);
-        } else {
-            // Divide and Conquer Approach
-            std::vector<int> temp(courses.size());
-            inversions = countInversionsDAC(courses, temp, 0, courses.size() - 1);
-        }
-
+        // Calculate inversions for valid data
+        int inversions = (approach == 0) ? countInversionsBruteForce(courses) : countInversionsDivideAndConquer(courses, 0, courses.size() - 1);
+        
         if (inversions == -1) {
             invalid_data_count++;
             inversion_count_map[-1]++;  // Count as invalid data
@@ -175,11 +165,10 @@ void processData(const std::string& input_file, const std::string& filename, int
     outfile << "StudentID,InversionCount\n";
     int student_id = 1;
     for (auto& courses : data) {
-        if (isInvalidData(courses) || countInversionsBruteForce(courses) == -1) {
+        if (isInvalidData(courses) || (approach == 0 ? countInversionsBruteForce(courses) : countInversionsDivideAndConquer(courses, 0, courses.size() - 1)) == -1) {
             outfile << "Student_" << student_id++ << ",N/A\n";
         } else {
-            int inversions = (approach == 0) ? countInversionsBruteForce(courses) 
-                                             : countInversionsDAC(courses, std::vector<int>(courses.size()), 0, courses.size() - 1);
+            int inversions = (approach == 0) ? countInversionsBruteForce(courses) : countInversionsDivideAndConquer(courses, 0, courses.size() - 1);
             outfile << "Student_" << student_id++ << "," << inversions << "\n";
         }
     }
